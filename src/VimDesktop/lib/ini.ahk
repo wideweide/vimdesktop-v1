@@ -491,3 +491,36 @@ GlobalSetEnvs(e,v){
 		globalenv := []
 	globalenv[e] := v
 }
+
+;在配置文件中增加配置，如果当前配置中不存在对应的键名称
+IniWriteIfNull(ini,section,key,value){
+	config := GetINIObj(ini)
+	keylist := config.GetKeys(section)
+	Loop,Parse,keylist,`n
+	{
+		IfInString,A_LoopField,%key%
+			return
+	}
+	IniWrite,%value%,%ini%,%section%,%key%
+}
+
+;在配置文件中增加配置，如果当前配置中不存在对应的键值
+;实现方法并不严谨
+IniWriteIfNullValue(ini,section,key,value){
+	Loop,read,%ini%
+	{
+		IfInString,A_LoopReadLine,%value%
+			return
+	}
+	/*
+	config := GetINIObj(ini)
+	keylist := config.GetKeys(section)
+	Loop,Parse,keylist,`n
+	{
+		str := config.GetValue(section,Trim(A_LoopField))
+		IfInString,str,%value%
+			return
+	}
+	*/
+	IniWrite,%value%,%ini%,%section%,%key%
+}

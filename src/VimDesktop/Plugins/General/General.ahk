@@ -1,9 +1,17 @@
 ﻿General:
     ; 通用功能
     Global FullScreenID := []
+	; 无任何快捷键定义，退出之前所有模式
+	vim.mode("disable","General")
+
+	;插入模式
 	vim.mode("insert","General")
 	vim.map("<esc>","<General_mode_normal>","General")
+	vim.map("<ctrl><esc>","<General_mode_disable>","General")
+
+	;normal模式
 	vim.mode("normal","General")
+	vim.map("<ctrl><esc>","<General_mode_disable>","General")
 	vim.map("i","<General_mode_insert>","General")
 	vim.map("0","<0>","General")
 	vim.map("1","<1>","General")
@@ -90,6 +98,7 @@
     vim.Comment("<Reload>","重启脚本")
     vim.Comment("<config>","打开配置界面")
     vim.Comment("<GeneralCopy>","复制General的热键到当前窗口")
+    vim.comment("<ToggleShowComment>","切换是否显示快捷键提示")
 return
 
 <1>:
@@ -105,9 +114,6 @@ return
 
 return
 
-<reload>:
-	reload
-return
 <down>:
     send {down}
 return
@@ -134,6 +140,15 @@ return
     vim.mode("normal",win)
 return
 
+<General_mode_disable>:
+	WinGetClass,win,A
+	vim.mode("disable",win)
+	WinGet,Path,ProcessPath,A
+	Splitpath,Path,,,,name
+	Tooltip,%Name%禁用VIM模式
+	settimer,VIMOK,-1400
+	return
+
 <General_mode_insert>:
 	WinGetClass,win,A
     vim.mode("Insert",win)
@@ -145,6 +160,7 @@ return
 GeneralCopy() {
 	WinGetClass,win,A
 	vim.copy("General",win)
+	vim.mode("normal",win)
 	WinGet,Path,ProcessPath,A
 	Splitpath,Path,,,,name
 	Tooltip,%Name%启用VIM模式
@@ -786,4 +802,10 @@ return
 ;激活最后一个标签
 <ActivateTab0>:
      send ^{9}
+return
+
+;设置是否显示快捷键提示
+<ToggleShowComment>:
+	ToShowComment := not ToShowComment
+	IniWrite %ToShowComment%, %A_ScriptDir%\vimd.ini, Config, ToShowComment
 return
