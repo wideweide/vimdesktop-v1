@@ -23,8 +23,8 @@ TODO
 
 下一步计划 [Next Plan]
 ----------
--该版本仍可用，但已无人维护，推荐活跃分支： https://github.com/goreliu/vimdesktop
--关注Array原创版本，等待归来：http://git.oschina.net/linxinhong/VimDesktop
+- 该版本仍可用，但已无人维护，推荐活跃分支： https://github.com/goreliu/vimdesktop
+- 关注Array原创版本，等待归来：http://git.oschina.net/linxinhong/VimDesktop
 
 贡献及技术支持 [Contributor and Technique Support]
 --------------
