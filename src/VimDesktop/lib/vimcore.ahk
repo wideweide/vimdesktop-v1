@@ -14,8 +14,11 @@ Setkeydelay,-1
 return
 
 
+
 ; 此函数可以根据自己的喜好进行修改
 ShowComment(more="") {
+    if not ToShowComment
+	return
     WinGetClass,win,A
     w := vim.Vaild(win)
     mode := w.GetMode()
@@ -212,6 +215,17 @@ Class vimcore {
 		}
 		This.vimWindows[win2] := w1
         return True
+	}
+
+	CopyMode(win,mode,to) {
+		w := This.Vaild(win)
+		If strlen(mode) = 0
+			return
+
+		vim.mode(to,win)
+		m := w.winmode[mode]
+		For k , l in m.KeyBody
+			vim.map(k,l,win)
 	}
 
     Control(switch,win="") {

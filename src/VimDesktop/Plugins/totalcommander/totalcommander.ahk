@@ -1,12 +1,28 @@
-﻿totalcommander:
+﻿TotalCommander:
 ;=======================================================
-	If not fileexist(A_ScriptDir "\plugins\totalcommander\totalcommander.ini")
-		fileAppend,,%A_ScriptDir%\plugins\totalcommander\totalcommander.ini
-	Global tcconfig := GetINIObj(A_ScriptDir "\plugins\totalcommander\totalcommander.ini")
-	Global TCPath := tcconfig.GetValue("Config","TCPath")
-	Global TCINI  := tcconfig.GetValue("Config","TCINI")
+	Global tcconfig := GetINIObj(ConfigPath)
+	Global TCPath := tcconfig.GetValue("TotalCommander_Config","TCPath")
+	Global TCINI  := tcconfig.GetValue("TotalCommander_Config","TCINI")
 	Global TCINIObj
-	If Not FileExist(TCPath)
+
+
+	;MsgBox,"%TCPath%"
+	If !FileExist(TCPath)
+	{	Process,Exist,totalcmd.exe
+		If ErrorLevel
+		{	WinGet,TCPath,ProcessPath,ahk_pid %ErrorLevel%
+			;MsgBox,% TCPath
+		}
+		Else
+		{	Process,Exist,totalcmd64.exe
+			If ErrorLevel
+				WinGet,TCPath,ProcessPath,ahk_pid %ErrorLevel%
+		}
+		If TCPath
+			IniWrite,%TCPath%,%ConfigPath%,TotalCommander_Config,TCPath
+	}
+
+	If TCPath and Not FileExist(TCPath)
 	{
 		RegRead,TCDir,HKEY_CURRENT_USER,Software\Ghisler\Total Commander,InstallDir
 		If FileExist(TCDir "\totalcmd.exe")
@@ -19,13 +35,19 @@
 		GUI,FindTC:Add,Button,w300 gTotalcomander_select_tcdir,TC目录路径不对? (&D)
 		GUI,FindTC:Show,,Total Commander 设置路径
 	}
-	If not FileExist(TCINI)
+
+	If TCPath and not FileExist(TCINI)
 	{
 		SplitPath,TCPath,,dir
 		TCINI := dir "\wincmd.ini"
-		IniWrite,%TCINI%,%A_ScriptDir%\plugins\totalcommander\totalcommander.ini,config,tcini
+		IniWrite,%TCINI%,%ConfigPath%,TotalCommander_Config,TCINI
 	}
 	tciniobj    := GetINIObj(TCINI)
+
+	
+	;添加将TC作为打开文件对话框的快捷键
+	IniWriteIfNullValue(ConfigPath,"Global","*<ctrl>;","<FocusTCCmd>")
+
 	If RegExMatch(TcPath,"i)totalcmd64\.exe$")
 	{
 		Global TCListBox := "LCLListBox"
@@ -48,12 +70,15 @@
 	vim.Comment("<Insert_Mode_TC>","进入插入模式")
 	vim.Comment("<ToggleTC>","打开/激活TC")
 
+	vim.comment("<FocusTCCmd>","激活TC，并定位到命令行")
+
 	vim.Comment("<azHistory>","a-z历史导航")
 	vim.Comment("<DownSelect>","向下选择")
 	vim.Comment("<UpSelect>","向上选择")
 	vim.Comment("<Mark>","标记功能")
 	vim.Comment("<ForceDelete>","强制删除")
 	vim.Comment("<ListMark>","显示标记")
+	vim.Comment("<Toggle_50_100Percent>","切换当前窗口显示状态50%~100%")
 	vim.Comment("<WinMaxLeft>","最大化左侧窗口")
 	vim.Comment("<WinMaxRight>","最大化右侧窗口")
 	vim.Comment("<GoLastTab>","切换到最后一个标签")
@@ -82,18 +107,25 @@
 
 	vim.mode("insert","TTOTAL_CMD")
 	vim.SetTimeOut(800,"TTOTAL_CMD")
-    vim.map("<esc>","<Normal_Mode_TC>","TTOTAL_CMD")
+	vim.map("<esc>","<Normal_Mode_TC>","TTOTAL_CMD")
 	vim.mode("Search","TTOTAL_CMD")
-    vim.map("<esc>","<Normal_Mode_TC>","TTOTAL_CMD")
+	vim.map("<esc>","<Normal_Mode_TC>","TTOTAL_CMD")
 
 	vim.mode("normal","TTOTAL_CMD")
+
 	;复制/移动到右侧 f取file的意思 filecopy
 	vim.map("fc","<cm_CopyOtherpanel>","TTOTAL_CMD")
 	vim.map("fx","<cm_MoveOnly>","TTOTAL_CMD")
+
+	;使用队列复制/移动到右侧 q-queue,fcq会影响对fc的使用，改用fqc/fqx的方式
+	vim.map("fqc","<CopyUseQueues>","TTOTAL_CMD")
+	vim.map("fqx","<MoveUseQueues>","TTOTAL_CMD")
+
 	;ff复制到剪切板 fz剪切到剪切板 fv粘贴
 	vim.map("ff","<cm_CopyToClipboard>","TTOTAL_CMD")
 	vim.map("fz","<cm_CutToClipboard>","TTOTAL_CMD")
 	vim.map("fv","<cm_PasteFromClipboard>","TTOTAL_CMD")
+
 	;fb复制到收藏夹某个目录，fd移动到收藏夹的某个目录
 	vim.map("fb","<CopyDirectoryHotlist>","TTOTAL_CMD")
 	vim.map("fd","<MoveDirectoryHotlist>","TTOTAL_CMD")
@@ -126,7 +158,6 @@
 	vim.map("D","<cm_OpenDesktop>","TTOTAL_CMD")
 	vim.map("e","<cm_ContextMenu>","TTOTAL_CMD")
 	vim.map("E","<cm_ExeCuteDOS>","TTOTAL_CMD")
-	vim.map("N","<cm_DirectoryHistory>","TTOTAL_CMD")
 	vim.map("n","<azHistory>","TTOTAL_CMD")
 	vim.map("m","<Mark>","TTOTAL_CMD")
 	vim.map("M","<Half>","TTOTAL_CMD")
@@ -157,13 +188,17 @@
 	vim.map("|","<cm_ClearAll>","TTOTAL_CMD")
 	vim.map("-","<cm_SwitchSeparateTree>","TTOTAL_CMD")
 	vim.map("=","<cm_MatchSrc>","TTOTAL_CMD")
+	vim.map(";","<cm_FocusCmdLine>","TTOTAL_CMD")
 	vim.map(":","<cm_FocusCmdLine>","TTOTAL_CMD")
 	vim.map("G","<LastLine>","TTOTAL_CMD")
 	vim.map("ga","<cm_CloseAllTabs>","TTOTAL_CMD")
 	vim.map("gg","<GoToLine>","TTOTAL_CMD")
 	vim.map("g$","<LastLine>","TTOTAL_CMD")
-	vim.map("gn","<cm_SwitchToNextTab>","TTOTAL_CMD")
-	vim.map("gp","<cm_SwitchToPreviousTab>","TTOTAL_CMD")
+
+	;与vim保持一致
+	vim.map("gt","<cm_SwitchToNextTab>","TTOTAL_CMD")
+	vim.map("gT","<cm_SwitchToPreviousTab>","TTOTAL_CMD")
+
 	vim.map("gc","<cm_CloseCurrentTab>","TTOTAL_CMD")
 	vim.map("gb","<cm_OpenDirInNewTabOther>","TTOTAL_CMD")
 	vim.map("ge","<cm_Exchange>","TTOTAL_CMD")
@@ -205,7 +240,7 @@
 	vim.map("Vf","<cm_VisKeyButtons>","TTOTAL_CMD")
 	vim.map("Vw","<cm_VisDirTabs>","TTOTAL_CMD")
 	vim.map("Ve","<cm_CommandBrowser>","TTOTAL_CMD")
-	vim.map("zz","<cm_50Percent>","TTOTAL_CMD")
+	vim.map("zz","<Toggle_50_100Percent>","TTOTAL_CMD")
 	vim.map("zi","<WinMaxLeft>","TTOTAL_CMD")
 	vim.map("zo","<WinMaxRight>","TTOTAL_CMD")
 	vim.map("zt","<AlwayOnTop>","TTOTAL_CMD")
@@ -252,6 +287,9 @@ TTOTAL_CMD_CheckMode()
 ;		Return True
 ;	If RegExMatch(ctrl,TCEdit)
 ;		Return True
+
+	Ifinstring,ctrl,RichEdit20W1
+		Return False
 	Ifinstring,ctrl,%TCListBox% 
 		Return False
 	Return True
@@ -301,6 +339,35 @@ return
     ;settimer,AUTHTC,on
 	;emptymem()
 return
+
+;激活TC
+<FocusTC>:
+{
+	IfWinExist,AHK_CLASS TTOTAL_CMD
+		Winactivate,AHK_ClASS TTOTAL_CMD
+	Else
+	{
+		Run,%TCPath%
+		Loop,4
+		{
+			IfWinNotActive,AHK_CLASS TTOTAL_CMD
+				WinActivate,AHK_CLASS TTOTAL_CMD
+			Else
+				Break
+			Sleep,500
+		}
+	}
+	return
+}
+
+;激活TC，并定位到命令行
+<FocusTCCmd>:
+{
+	gosub,<FocusTC>
+	SendPos(4003)
+	return
+}
+
 AUTHTC:
     AUTHTC()
 return
@@ -330,6 +397,11 @@ azHistory2()
 			IniRead,history,%f%,LeftHistory
 		Else
 			IniRead,history,%TCINI%,LeftHistory
+		If RegExMatch(history,"RedirectSection=(.+)",HistoryRedirect)
+		{	StringReplace,HistoryRedirect1,HistoryRedirect1,`%COMMANDER_PATH`%,%TCPath%\..
+			;MsgBox,% HistoryRedirect1
+			IniRead,history,%HistoryRedirect1%,LeftHistory
+		}
 	}
 	Else
 	{
@@ -337,7 +409,13 @@ azHistory2()
 			IniRead,history,%f%,RightHistory
 		Else
 			IniRead,history,%TCINI%,RightHistory
+		If RegExMatch(history,"RedirectSection=(.+)",HistoryRedirect)
+		{	StringReplace,HistoryRedirect1,HistoryRedirect1,`%COMMANDER_PATH`%,%TCPath%\..
+			;MsgBox,% HistoryRedirect1
+			IniRead,history,%HistoryRedirect1%,RightHistory
+		}
 	}
+	;MsgBox,%f%_%TCINI%_%history%
 	history_obj := []
 	Global history_name_obj := []
 	Loop,Parse,history,`n
@@ -362,6 +440,11 @@ azHistory2()
 			name  :=  RegExReplace(Value,"::\{21EC2020\-3AEA\-1069\-A2DD\-08002B30309D\}\\::\{2227A280\-3AEA\-1069\-A2DE\-08002B30309D\}\|")
 			value := 2126
 		}
+		If RegExMatch(Value,"::\{208D2C60\-3AEA\-1069\-A2D7\-08002B30309D\}\|") ;NothingIsBig的是XP系统，网上邻居是这个调整
+		{
+			name := RegExReplace(Value,"::\{208D2C60\-3AEA\-1069\-A2D7\-08002B30309D\}\|")
+			value := 2125
+		}
 		If RegExMatch(Value,"::\{F02C1A0D\-BE21\-4350\-88B0\-7367FC96EF3C\}\|")
 		{
 			name := RegExReplace(Value,"::\{F02C1A0D\-BE21\-4350\-88B0\-7367FC96EF3C\}\|")
@@ -377,19 +460,22 @@ azHistory2()
 			name := RegExReplace(Value,"::\{645FF040\-5081\-101B\-9F08\-00AA002F954E\}\|")
 			value := 2127
 		}
-		name .= A_Tab "[&"  chr(max-idx+64) "]"
+		name .= A_Tab "[&"  chr(idx+65) "]"
 		history_obj[idx] := name 
 		history_name_obj[name] := value
 	}
 	Menu,az,UseErrorLevel
 	Menu,az,add
 	Menu,az,deleteall
+	size := TCConfig.GetValue("TotalCommander_Config","MenuIconSize")
+	if not size
+		size := 20
 	Loop,%max%
 	{
-		idx := max - A_Index
+		idx := A_Index - 1
 		name := history_obj[idx]
 		Menu,az,Add,%name%,azHistorySelect
-		Menu,az,icon,%name%,%A_ScriptDir%\plugins\totalcommander\a-zhistory.icl,%A_Index%
+		Menu,az,icon,%name%,%A_ScriptDir%\plugins\TotalCommander\a-zhistory.icl,%A_Index%,%size%
 	}
 	ControlGetFocus,TLB,ahk_class TTOTAL_CMD
 	ControlGetPos,xn,yn,wn,,%TLB%,ahk_class TTOTAL_CMD
@@ -407,7 +493,7 @@ azHistorySelect()
 		GoSub,<cm_OpenDesktop>
 	Else If ( history_name_obj[A_ThisMenuItem] = 2126 ) or RegExMatch(A_ThisMenuItem,"::\{21EC2020\-3AEA\-1069\-A2DD\-08002B30309D\}\\::\{2227A280\-3AEA\-1069\-A2DE\-08002B30309D\}")
 		GoSub,<cm_OpenPrinters>
-	Else If ( history_name_obj[A_ThisMenuItem] = 2125 ) or RegExMatch(A_ThisMenuItem,"::\{F02C1A0D\-BE21\-4350\-88B0\-7367FC96EF3C\}")
+	Else If ( history_name_obj[A_ThisMenuItem] = 2125 ) or RegExMatch(A_ThisMenuItem,"::\{F02C1A0D\-BE21\-4350\-88B0\-7367FC96EF3C\}") or RegExMatch(A_ThisMenuItem,"::\{208D2C60\-3AEA\-1069\-A2D7\-08002B30309D\}\|") ;NothingIsBig的是XP系统，网上邻居是这个调整
 		GoSub,<cm_OpenNetwork>
 	Else If ( history_name_obj[A_ThisMenuItem] = 2123 ) or RegExMatch(A_ThisMenuItem,"::\{26EE0668\-A00A\-44D7\-9371\-BEB064C98683\}\\0")
 		GoSub,<cm_OpenControls>
@@ -678,7 +764,9 @@ CreateNewFile()
 	Menu,FileTemp,Add ,1 文件夹,<cm_Mkdir>
 	Menu,FileTemp,Icon,1 文件夹,%A_WinDir%\system32\Shell32.dll,4
 	Menu,FileTemp,Add ,2 快捷方式,<cm_CreateShortcut>
-	Menu,FileTemp,Icon,2 快捷方式,%A_WinDir%\system32\Shell32.dll,264
+	If A_OSVersion in WIN_2000,WIN_XP
+		Menu,FileTemp,Icon,2 快捷方式,%A_WinDir%\system32\Shell32.dll,30 ;我测试xp下必须是30
+	Else Menu,FileTemp,Icon,2 快捷方式,%A_WinDir%\system32\Shell32.dll,264 ;原来是264，xp下反正是有问题
 	Menu,FileTemp,Add ,3 添加到新模板,<AddToTempFiles>
 	Menu,FileTemp,Icon,3 添加到新模板,%A_WinDir%\system32\Shell32.dll,-155
 	FileTempMenuCheck()
@@ -697,11 +785,14 @@ FileTempMenuCheck()
 		Menu,FileTemp,Add,%ft%,FileTempNew
 		Ext := "." . A_LoopFileExt
 		IconFile := RegGetNewFileIcon(Ext)
-		IconFIle := RegExReplace(IconFile,"i)%systemroot%",A_WinDir)
+		IconFile := RegExReplace(IconFile,"i)%systemroot%",A_WinDir)
 		IconFilePath := RegExReplace(IconFile,",-?\d*","")
+		StringReplace,IconFilePath,IconFilePath,",,A
 		IconFileIndex := RegExReplace(IconFile,".*,","")
+		IconFileIndex := IconFileIndex>=0?IconFileIndex+1:IconFileIndex
+		;MsgBox,%IconFile%_%IconFilePath%_%IconFileIndex%
 		If Not FileExist(IconFilePath)
-			Menu,FileTemp,Icon,%ft%,%A_WinDir%\system32\Shell32.dll,-152
+			Menu,FileTemp,Icon,%ft%,%A_WinDir%\system32\Shell32.dll,1 ;-152
 		Else
 			Menu,FileTemp,Icon,%ft%,%IconFilePath%,%IconFileIndex%
 	}
@@ -838,12 +929,14 @@ NewFileOK()
 		DstPath := A_Desktop
 	NewFile := DstPath . "\" . NewFileName
 	If FileExist(NewFile)
-	{
-		MsgBox, 4, 新建文件, 新建文件已存在，是否覆盖？
+	{	MsgBox, 4, 新建文件, 新建文件已存在，是否覆盖？
 		IfMsgBox No
 			Return
 	}
-		FileCopy,%SrcPath%,%NewFile%,1
+	If !FileExist(SrcPath)
+		Run,fsutil file createnew "%NewFile%" 0,,Hide
+
+	Else	FileCopy,%SrcPath%,%NewFile%,1
 	Gui,Destroy
 	WinActivate,AHK_CLASS TTOTAL_CMD
 	ControlGetFocus,FocusCtrl,AHK_Class TTOTAL_CMD
@@ -871,7 +964,9 @@ ReadNewFile()
 	SetBatchLines -1
 	Loop,HKEY_CLASSES_ROOT ,,1,0
 	{
-		If RegExMatch(A_LoopRegName,"^\..*")
+		If A_LoopRegName=.lnk ;让新建快捷方式无效
+			Continue
+		Else If RegExMatch(A_LoopRegName,"^\..*")
 		{
 			Reg := A_LoopRegName
 			Loop,HKEY_CLASSES_ROOT,%Reg%,1,1
@@ -910,11 +1005,15 @@ ReadNewFile()
 		Menu,CreateNewFile,Add,%MenuFile%,NewFile
 
 		IconFile := RegGetNewFileIcon(Exec)
-		IconFIle := RegExReplace(IconFile,"i)%systemroot%",A_WinDir)
+		IconFile := RegExReplace(IconFile,"i)%systemroot%",A_WinDir)
+		IconFile := RegExReplace(IconFile,"i)%ProgramFiles%",A_ProgramFiles)
 		IconFilePath := RegExReplace(IconFile,",-?\d*","")
+		StringReplace,IconFilePath,IconFilePath,",,A
 		If Not FileExist(IconFilePath)
 			IconFilePath := ""
 		IconFileIndex := RegExReplace(IconFile,".*,","")
+		IconFileIndex := IconFileIndex>=0?IconFileIndex+1:IconFileIndex
+		;MsgBox,%IconFile%_%IconFilePath%_%IconFileIndex%
 		If Not RegExMatch(IconFileIndex,"^-?\d*$")
 			IconFileIndex := ""
 		If RegExMatch(Exec,"\.lnk")
@@ -1120,6 +1219,19 @@ gooncopy:
 	SendPos(3101)
 return
 
+
+;<CopyUseQueues>: >>无需确认，使用队列拷贝文件至另一窗口{{{2
+<CopyUseQueues>:
+	Send {F5}
+	Send {F2}
+Return
+
+;<MoveUseQueues>: >>无需确认，使用队列移动文件{{{2
+<MoveUseQueues>:
+	Send {F6}
+	Send {F2}
+Return
+
 ;<MoveDirectoryHotlist>: >>移动到常用文件夹{{{2
 <MoveDirectoryHotlist>:
 	If SendPos(0)
@@ -1182,9 +1294,8 @@ Totalcomander_select_tc(){
 	TCPath := dir "\totalcmd.exe"
 	TCINI  := dir "\wincmd.ini"
 	GUi,FindTC:Destroy
-	f := TCConfig.filepath
-	IniWrite,%TCPath%,%f%,config,tcpath
-	IniWrite,%TCINI%,%f%,config,tcini
+	IniWrite,%TCPath%,%ConfigPath%,TotalCommander_Config,TCPath
+	IniWrite,%TCINI%,%ConfigPath%,TotalCommander_Config,TCINI
 }
 Totalcomander_select_tc64:
 	Totalcomander_select_tc64()
@@ -1195,9 +1306,8 @@ Totalcomander_select_tc64(){
 	TCPath := dir "\totalcmd64.exe"
 	TCINI  := dir "\wincmd.ini"
 	GUi,FindTC:Destroy
-	f := TCConfig.filepath
-	IniWrite,%TCPath%,%f%,config,tcpath
-	IniWrite,%TCINI%,%f%,config,tcini
+	IniWrite,%TCPath%,%ConfigPath%,TotalCommander_Config,TCPath
+	IniWrite,%TCINI%,%ConfigPath%,TotalCommander_Config,TCINI
 }
 Totalcomander_select_tcdir:
 	Totalcomander_select_tcdir()
@@ -1207,6 +1317,26 @@ Totalcomander_select_tcdir(){
 	GuiControl,,Edit1,%tcdir%
 }
 
+;切换显示比例50%-100%
+<Toggle_50_100Percent>:
+	ControlGetPos, , , wp,hp, TPanel1, ahk_class TTOTAL_CMD
+	ControlGetPos, , , w1, h1, TMyListBox1, ahk_class TTOTAL_CMD
+	ControlGetPos, , , w2, h2, TMyListBox2, ahk_class TTOTAL_CMD
+	if ( wp  < hp) 	;纵向
+		{
+		if  ( abs(w1 - w2) > 2  )
+			SendPos(909)
+		else
+			SendPos(910)
+		}
+	else	;横向
+		{
+		if  ( abs(h1 - h2)  > 2  )
+			SendPos(909)
+		else
+			SendPos(910)
+		}
+	Return
 
 
 

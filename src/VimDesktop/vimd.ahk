@@ -15,23 +15,38 @@ Menu,Tray,Add
 Menu,Tray,Add,主页(&M),GUI_GotoWeb
 Menu,Tray,Add,提交问题(&I),GUI_GotoIssue
 Menu,Tray,Add
-Menu,Tray,Add,重启(&R),GUI_Reload
+Menu,Tray,Add,重启(&R),<reload>
 Menu,Tray,Add,退出(&X),GUI_Exit
 Menu,Tray,Icon,viatc.ico
 ;====================================================================
 ; Read Config {{{1
-If Not FileExist(A_ScriptDir "\vimd.ini")
-	FileAppend,,%A_ScriptDir%\vimd.ini
-config := GetINIObj(A_ScriptDir "\vimd.ini")
+
+FileEncoding,utf-8
+
+Global ConfigPath := A_ScriptDir  "\vimd.ini"
+
+If Not FileExist(ConfigPath)
+	FileAppend,,%ConfigPath%
+If Not FileExist(A_ScriptDir "\plugins\plugins.ahk")
+	Run %A_ScriptDir%\check.ahk
+
+config := GetINIObj(ConfigPath)
 plog   := GetINIObj(A_ScriptDir "\plugins\plugins.ahk")
 
 Global InvalidMode := config.GetValue("config","InvalidMode")
+
+;是否显示快捷键注释
+Global ToShowComment := true
+IniRead ToShowComment, %ConfigPath%, Config, ToShowComment, true
+
 sub := plog.GetKeys("ExtensionsTime")
 Loop,Parse,Sub,`n
 {
 	If IsLabel(A_LoopField) And Strlen(A_LoopField){
 		Enabled := strlen(config.GetValue("plugins",A_LoopField)) ? config.GetValue("plugins",A_LoopField) : 1
-		GoSub,%A_LoopField%
+		if Enabled{
+			GoSub,%A_LoopField%
+		}
 	}
 }
 keylist := config.GetKeys("Global")
@@ -40,7 +55,7 @@ Loop,Parse,keylist,`n
 	If not strlen(A_LoopField)
 		continue
 	value := config.GetValue("Global",Trim(A_LoopField))
-	If RegExMatch(value,"\[=[^\[\]]*\]",mode)
+	If RegExMatch(value,"\[=[^\[\]]*\]",mode)Plugins
 		vim.mode(Substr(mode,3,strlen(mode)-3))
 	If RegExMatch(Trim(A_LoopField),"^\*")
 		vim.smap(SubStr(Trim(A_LoopField),2),RegExReplace(value,"\[=[^\[\]]*\]"))
@@ -77,7 +92,20 @@ for class ,k in vim.vimWindows
 	}
 }
 
-WatchDirectory(A_ScriptDir "\plugins",1)
+
+;检查是否触发了重启操作
+IniRead, trigger, %ConfigPath%, Config, Reload.Trigger, null
+if trigger <> null
+{	
+	MsgBox, , 提示 -- 两秒后自动关闭.., %trigger%, 2
+
+	IniDelete, %ConfigPath%, Config, Reload.Trigger
+}
+
+
+
+
+WatchDirectory(A_ScriptDir ,1)
 autoload := strlen(config.GetValue("config","autoload")) ? config.GetValue("config","autoload") : 1
 If autoload
 	SetTimer,WatchPlugins,1000
@@ -89,6 +117,7 @@ WatchPlugins:
 	WatchDirectory("PluginsChange")
 return
 PluginsChange(a,f,i){
+	IniWrite, 插件或配置的变更已被成功应用！, %ConfigPath%, Config, Reload.Trigger
 	Run %A_ScriptDir%\check.ahk
 	;SetTimer,WatchPlugins,off
 	ExitApp
@@ -204,7 +233,9 @@ return
 GUI_Listline:
 	Listlines
 return
-GUI_Reload:
+
+<reload>:
+	IniWrite, VimDesktop 重启完成！, %ConfigPath%, Config, Reload.Trigger
 	Reload
 return
 
@@ -250,4 +281,5 @@ Receive_WM_COPYDATA(wParam, lParam){
 #Include %A_ScriptDir%\lib\anchor.ahk
 #Include %A_ScriptDir%\lib\ini.ahk
 #Include %A_ScriptDir%\lib\watchdir.ahk
+#Include *i %A_ScriptDir%\lib\InputColor.ahk
 #Include *i %A_ScriptDir%\plugins\plugins.ahk
